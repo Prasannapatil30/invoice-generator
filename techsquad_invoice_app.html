@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TechSquad Invoice App</title>
+<style>
+:root{--brand:#0f62fe;--dark:#0b1220;--muted:#64748b;--line:#e2e8f0;--bg:#f6f8fb}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:#0f172a}
+header{background:var(--dark);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0f62fe,#00c2a8);display:grid;place-items:center;font-weight:800}
+header h1{font-size:18px;margin:0}header p{margin:2px 0 0;font-size:12px;color:#cbd5e1}
+.wrap{max-width:1100px;margin:20px auto;padding:0 16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+h2{margin:0 0 14px;font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff}
+textarea{min-height:70px;resize:vertical}
+button{border:0;border-radius:9px;padding:11px 15px;font-weight:700;cursor:pointer;font-size:14px}
+.primary{background:var(--brand);color:#fff}.ghost{background:#eef2ff;color:var(--brand)}.danger{background:#fee2e2;color:#b91c1c}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:12px;color:var(--muted);text-transform:uppercase}
+.right{text-align:right}.totals div{display:flex;justify-content:space-between;padding:5px 0}
+.grand{font-size:19px;font-weight:800;color:var(--brand);border-top:2px solid var(--line);padding-top:8px;margin-top:6px}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.unpaid{background:#fee2e2;color:#b91c1c}.paid{background:#dcfce7;color:#166534}.advance{background:#fef3c7;color:#92400e}.partial{background:#dbeafe;color:#1d4ed8}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:9px 14px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:600;cursor:pointer}
+.tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+@media print{body{background:#fff}.no-print{display:none!important}.card{border:0;box-shadow:none;margin:0;padding:0}}
+#invoicePaper{max-width:760px;margin:auto;background:#fff;padding:28px;border:1px solid var(--line);border-radius:12px}
+.inv-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:2px solid var(--dark);padding-bottom:14px;margin-bottom:16px}
+.inv-title{font-size:24px;font-weight:800;color:var(--brand)}
+.inv-sub{font-size:12px;color:var(--muted)}
+.inv-meta{text-align:right;font-size:12px}
+.inv-section{margin:14px 0}.inv-label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
+</style>
+</head>
+<body>
+<header><div class="logo">TS</div><div><h1>TechSquad Invoice App</h1><p>Robotics kits • Orders • GST invoices</p></div></header>
+
+<div class="wrap">
+<div class="tabs no-print">
+<button class="tab active" onclick="showTab('new')">New Invoice</button>
+<button class="tab" onclick="showTab('orders')">Orders</button>
+<button class="tab" onclick="showTab('products')">Products</button>
+<button class="tab" onclick="showTab('settings')">Business Settings</button>
+</div>
+
+<section id="tab-new" class="card">
+<h2>Create Invoice</h2>
+<div class="grid">
+<div><label>Customer name</label><input id="custName" placeholder="Customer name"></div>
+<div><label>Phone / WhatsApp</label><input id="custPhone" placeholder="+91..."></div>
+<div><label>School / College</label><input id="custOrg" placeholder="Optional"></div>
+<div><label>Address</label><input id="custAddress" placeholder="Optional"></div>
+</div>
+
+<h2 style="margin-top:20px">Add Kits</h2>
+<div class="row">
+<div style="flex:2"><label>Robotics kit</label><select id="productSelect"></select></div>
+<div style="width:110px"><label>Quantity</label><input id="qty" type="number" min="1" value="1"></div>
+<div><button class="primary" onclick="addItem()">Add item</button></div>
+</div>
+
+<table id="itemsTable" style="margin-top:14px"><thead><tr><th>Kit</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th><th></th></tr></thead><tbody></tbody></table>
+<div id="emptyItems" class="empty">No kits added yet.</div>
+
+<h2 style="margin-top:20px">Tax & Payment</h2>
+<div class="grid">
+<div><label>Discount (₹)</label><input id="discount" type="number" min="0" step="0.01" value="0" oninput="calc()"></div>
+<div><label>GST type</label><select id="gstType" onchange="calc()"><option value="none">No GST</option><option value="cgst_sgst">CGST + SGST</option><option value="igst">IGST</option><option value="custom">Custom GST amount</option></select></div>
+<div><label>GST rate / amount</label><input id="gstInput" type="number" min="0" step="0.01" value="0" oninput="calc()" placeholder="18 for 18%, or amount in ₹"></div>
+<div><label>Payment status</label><select id="payStatus"><option value="Unpaid">Unpaid</option><option value="Advance Received">Advance Received</option><option value="Partially Paid">Partially Paid</option><option value="Paid">Paid</option></select></div>
+<div><label>Amount received (₹)</label><input id="amountPaid" type="number" min="0" step="0.01" value="0" oninput="calc()"></div>
+<div style="grid-column:1/-1"><label>Order notes</label><textarea id="notes" placeholder="Optional notes"></textarea></div>
+</div>
+
+<div class="totals" style="max-width:360px;margin-left:auto;margin-top:18px">
+<div><span>Subtotal</span><b id="subtotal">₹0</b></div>
+<div><span>Discount</span><b id="discountOut">₹0</b></div>
+<div><span>Taxable value</span><b id="taxable">₹0</b></div>
+<div><span>GST</span><b id="gstOut">₹0</b></div>
+<div class="grand"><span>Total payable</span><span id="total">₹0</span></div>
+<div><span>Amount received</span><b id="paidOut">₹0</b></div>
+<div><span>Balance due</span><b id="balance">₹0</b></div>
+</div>
+
+<div class="row" style="margin-top:18px">
+<button class="primary" onclick="saveInvoice()">Save invoice</button>
+<button class="ghost" onclick="previewInvoice()">Preview / Print PDF</button>
+<button class="danger" onclick="clearForm()">Clear</button>
+</div>
+</section>
+
+<section id="tab-orders" class="card" style="display:none">
+<h2>Saved Invoices</h2>
+<input id="search" placeholder="Search customer, invoice no., or kit" oninput="renderOrders()">
+<div id="ordersList"></div>
+</section>
+
+<section id="tab-products" class="card" style="display:none">
+<h2>Product Catalog</h2>
+<div class="row">
+<div style="flex:2"><label>Kit name</label><input id="pName" placeholder="Kit name"></div>
+<div style="width:150px"><label>Price (₹)</label><input id="pPrice" type="number" min="0" step="0.01"></div>
+<div><button class="primary" onclick="addProduct()">Add kit</button></div>
+</div>
+<div id="productsList" style="margin-top:14px"></div>
+</section>
+
+<section id="tab-settings" class="card" style="display:none">
+<h2>Business Settings</h2>
+<div class="grid">
+<div><label>Business name</label><input id="bizName"></div>
+<div><label>Tagline</label><input id="bizTagline"></div>
+<div><label>Phone</label><input id="bizPhone"></div>
+<div><label>Email</label><input id="bizEmail"></div>
+<div><label>Address</label><input id="bizAddress"></div>
+<div><label>GSTIN</label><input id="bizGstin"></div>
+<div><label>UPI ID</label><input id="bizUpi"></div>
+<div><label>Invoice prefix</label><input id="invoicePrefix" value="TS"></div>
+</div>
+<button class="primary" style="margin-top:14px" onclick="saveSettings()">Save settings</button>
+</section>
+</div>
+
+<div id="printArea" style="display:none"></div>
+
+<script>
+const DEFAULT_PRODUCTS=[
+ {name:"TechSquad Obstacle Avoidance Car Kit",category:"Beginner",price:1650},
+ {name:"TechSquad Bluetooth Control Car Kit",category:"Beginner",price:1500},
+ {name:"TechSquad IR Line Following Car Kit",category:"Popular",price:1350},
+ {name:"TechSquad Pro Robotic Arm with Web Control Kit",category:"Pro range",price:2350},
+ {name:"TechSquad Smart Agriculture (Irrigation) Kit - ThingSpeak",category:"Pro range",price:1780},
+ {name:"TechSquad Home Automation Kit - ESP8266 Web & WhatsApp",category:"Pro range",price:1780}
+];
+const DEFAULT_SETTINGS={bizName:"TECHSQUAD",bizTagline:"Robotics Kits & STEM Projects",bizPhone:"",bizEmail:"",bizAddress:"",bizGstin:"",bizUpi:"",invoicePrefix:"TS"};
+let products=JSON.parse(localStorage.getItem('ts_products')||'null')||DEFAULT_PRODUCTS;
+let settings=JSON.parse(localStorage.getItem('ts_settings')||'null')||DEFAULT_SETTINGS;
+let invoices=JSON.parse(localStorage.getItem('ts_invoices')||'[]');
+let items=[];
+const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function showTab(t){document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['new','orders','products','settings'][i]===t));
+ ['new','orders','products','settings'].forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
+ if(t==='orders')renderOrders();if(t==='products')renderProducts();if(t==='settings')loadSettings();}
+function refreshProductSelect(){const s=document.getElementById('productSelect');s.innerHTML=products.map((p,i)=>`<option value="${i}">${p.name} — ${money(p.price)}</option>`).join('')}
+function addItem(){const i=+document.getElementById('productSelect').value,q=Math.max(1,+document.getElementById('qty').value||1);const p=products[i];items.push({name:p.name,qty:q,rate:p.price});renderItems()}
+function removeItem(i){items.splice(i,1);renderItems()}
+function renderItems(){const b=document.querySelector('#itemsTable tbody');b.innerHTML=items.map((x,i)=>`<tr><td>${x.name}</td><td class="right">${x.qty}</td><td class="right">${money(x.rate)}</td><td class="right">${money(x.qty*x.rate)}</td><td><button class="danger" onclick="removeItem(${i})">Remove</button></td></tr>`).join('');document.getElementById('emptyItems').style.display=items.length?'none':'block';calc()}
+function calc(){const sub=items.reduce((a,x)=>a+x.qty*x.rate,0);const disc=+document.getElementById('discount').value||0;const taxable=Math.max(0,sub-disc);const type=document.getElementById('gstType').value;let gst=0,gstLabel='GST';
+ if(type==='custom'){gst=+document.getElementById('gstInput').value||0}
+ else if(type!=='none'){const rate=+document.getElementById('gstInput').value||0;gst=taxable*rate/100;gstLabel=(type==='igst'?'IGST @ ':'GST @ ')+rate+'%'}
+ const total=taxable+gst,paid=+document.getElementById('amountPaid').value||0;
+ document.getElementById('subtotal').textContent=money(sub);document.getElementById('discountOut').textContent=money(disc);
+ document.getElementById('taxable').textContent=money(taxable);document.getElementById('gstOut').textContent=gstLabel+': '+money(gst);
+ document.getElementById('total').textContent=money(total);document.getElementById('paidOut').textContent=money(paid);document.getElementById('balance').textContent=money(Math.max(0,total-paid));}
+function saveInvoice(){if(!items.length){alert('Add at least one kit.');return}
+ const sub=items.reduce((a,x)=>a+x.qty*x.rate,0),disc=+document.getElementById('discount').value||0,taxable=Math.max(0,sub-disc);
+ const type=document.getElementById('gstType').value;let gst=0,gstRate=0,gstAmount=0;
+ if(type==='custom'){gstAmount=+document.getElementById('gstInput').value||0;gst=gstAmount}
+ else if(type!=='none'){gstRate=+document.getElementById('gstInput').value||0;gst=taxable*gstRate/100;gstAmount=gst}
+ const total=taxable+gst,paid=+document.getElementById('amountPaid').value||0;
+ const inv={id:Date.now(),number:nextInvoiceNumber(),date:new Date().toISOString(),customer:{name:document.getElementById('custName').value,phone:document.getElementById('custPhone').value,org:document.getElementById('custOrg').value,address:document.getElementById('custAddress').value},items:JSON.parse(JSON.stringify(items)),discount:disc,taxable,gstType:type,gstRate,gstAmount,total,paid,status:document.getElementById('payStatus').value,notes:document.getElementById('notes').value};
+ invoices.unshift(inv);save('ts_invoices',invoices);clearForm();alert('Invoice '+inv.number+' saved.');showTab('orders')}
+function nextInvoiceNumber(){const year=new Date().getFullYear();const prefix=(settings.invoicePrefix||'TS')+'-'+year+'-';const nums=invoices.map(i=>i.number).filter(n=>n&&n.startsWith(prefix)).map(n=>+n.split('-').pop()).filter(n=>!isNaN(n));return prefix+String((nums.length?Math.max(...nums):0)+1).padStart(4,'0')}
+function clearForm(){items=[];['custName','custPhone','custOrg','custAddress','discount','gstInput','amountPaid','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('discount').value=0;document.getElementById('gstInput').value=0;document.getElementById('amountPaid').value=0;document.getElementById('gstType').value='none';document.getElementById('payStatus').value='Unpaid';renderItems()}
+function renderOrders(){const q=(document.getElementById('search').value||'').toLowerCase();const list=invoices.filter(i=>!q||[i.number,i.customer.name,i.customer.phone,...i.items.map(x=>x.name)].join(' ').toLowerCase().includes(q));
+ document.getElementById('ordersList').innerHTML=list.length?list.map(i=>`<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b>${i.number}</b><div>${i.customer.name||'Customer'} • ${new Date(i.date).toLocaleDateString('en-IN')}</div><div>${i.items.map(x=>x.name+' ×'+x.qty).join(', ')}</div></div><div style="text-align:right"><div><b>${money(i.total)}</b></div><span class="badge ${i.status.toLowerCase().replace(/ /g,'')}">${i.status}</span><div style="margin-top:6px"><button class="ghost" onclick="previewInvoice('${i.id}')">View / Print</button> <button class="danger" onclick="deleteInvoice('${i.id}')">Delete</button></div></div></div></div>`).join(''):'<div class="empty">No invoices saved yet.</div>'}
+function deleteInvoice(id){if(!confirm('Delete this invoice?'))return;invoices=invoices.filter(i=>String(i.id)!==id);save('ts_invoices',invoices);renderOrders()}
+function addProduct(){const n=document.getElementById('pName').value.trim(),p=+document.getElementById('pPrice').value||0;if(!n||p<=0){alert('Enter kit name and price.');return}products.push({name:n,category:'Custom',price:p});save('ts_products',products);document.getElementById('pName').value='';document.getElementById('pPrice').value='';renderProducts();refreshProductSelect()}
+function deleteProduct(i){if(!confirm('Remove this kit from catalog?'))return;products.splice(i,1);save('ts_products',products);renderProducts();refreshProductSelect()}
+function renderProducts(){document.getElementById('productsList').innerHTML=`<table><thead><tr><th>Kit</th><th>Category</th><th class="right">Price</th><th></th></tr></thead><tbody>${products.map((p,i)=>`<tr><td>${p.name}</td><td>${p.category}</td><td class="right">${money(p.price)}</td><td><button class="danger" onclick="deleteProduct(${i})">Remove</button></td></tr>`).join('')}</tbody></table>`}
+function loadSettings(){Object.keys(settings).forEach(k=>{const e=document.getElementById(k);if(e)e.value=settings[k]||''})}
+function saveSettings(){['bizName','bizTagline','bizPhone','bizEmail','bizAddress','bizGstin','bizUpi','invoicePrefix'].forEach(k=>settings[k]=document.getElementById(k).value);save('ts_settings',settings);alert('Settings saved.')}
+function previewInvoice(id){const inv=id?invoices.find(i=>String(i.id)===id):makeDraftInvoice();if(!inv)return;
+ const s=settings;const gstRows=inv.gstType==='cgst_sgst'?`<tr><td>CGST @ ${(inv.gstRate/2).toFixed(2)}%</td><td class="right">${money(inv.gstAmount/2)}</td></tr><tr><td>SGST @ ${(inv.gstRate/2).toFixed(2)}%</td><td class="right">${money(inv.gstAmount/2)}</td></tr>`:inv.gstType==='igst'?`<tr><td>IGST @ ${inv.gstRate}%</td><td class="right">${money(inv.gstAmount)}</td></tr>`:inv.gstType==='custom'?`<tr><td>GST</td><td class="right">${money(inv.gstAmount)}</td></tr>`:'';
+ document.getElementById('printArea').innerHTML=`<div id="invoicePaper"><div class="inv-head"><div><div class="inv-title">${s.bizName||'TECHSQUAD'}</div><div class="inv-sub">${s.bizTagline||''}</div><div class="inv-sub">${s.bizAddress||''}<br>${s.bizPhone||''} ${s.bizEmail?'• '+s.bizEmail:''}</div>${s.bizGstin?`<div class="inv-sub">GSTIN: ${s.bizGstin}</div>`:''}</div><div class="inv-meta"><div style="font-size:20px;font-weight:800">TAX INVOICE</div><div><b>${inv.number}</b></div><div>Date: ${new Date(inv.date).toLocaleDateString('en-IN')}</div></div></div>
+ <div class="inv-section"><div class="inv-label">Bill to</div><b>${inv.customer.name||'Customer'}</b><br>${inv.customer.phone||''}<br>${inv.customer.org||''}<br>${inv.customer.address||''}</div>
+ <table><thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr></thead><tbody>${inv.items.map(x=>`<tr><td>${x.name}</td><td class="right">${x.qty}</td><td class="right">${money(x.rate)}</td><td class="right">${money(x.qty*x.rate)}</td></tr>`).join('')}</tbody></table>
+ <div class="totals" style="margin-top:14px"><div><span>Subtotal</span><b>${money(inv.subtotal)}</b></div><div><span>Discount</span><b>${money(inv.discount)}</b></div><div><span>Taxable value</span><b>${money(inv.taxable)}</b></div>${gstRows}<div class="grand"><span>Total payable</span><span>${money(inv.total)}</span></div><div><span>Amount paid</span><b>${money(inv.paid)}</b></div><div><span>Balance due</span><b>${money(Math.max(0,inv.total-inv.paid))}</b></div></div>
+ ${inv.notes?`<div class="inv-section"><div class="inv-label">Notes</div>${inv.notes}</div>`:''}
+ <div class="inv-section"><div class="inv-label">Payment details</div>${s.bizUpi?'UPI: '+s.bizUpi+'<br>':''}UPI / Bank transfer / Cash</div>
+ <div style="margin-top:28px;display:flex;justify-content:space-between"><div class="inv-sub">Thank you for choosing ${s.bizName||'TechSquad'}.</div><div class="inv-sub">Authorised Signatory</div></div></div>`;
+ document.getElementById('printArea').style.display='block';window.print();setTimeout(()=>document.getElementById('printArea').style.display='none',500)}
+function makeDraftInvoice(){const sub=items.reduce((a,x)=>a+x.qty*x.rate,0),disc=+document.getElementById('discount').value||0,taxable=Math.max(0,sub-disc);const type=document.getElementById('gstType').value;let gst=0,gstRate=0,gstAmount=0;if(type==='custom'){gstAmount=+document.getElementById('gstInput').value||0;gst=gstAmount}else if(type!=='none'){gstRate=+document.getElementById('gstInput').value||0;gst=taxable*gstRate/100;gstAmount=gst}
+ return{id:'draft',number:'DRAFT',date:new Date().toISOString(),customer:{name:document.getElementById('custName').value,phone:document.getElementById('custPhone').value,org:document.getElementById('custOrg').value,address:document.getElementById('custAddress').value},items:JSON.parse(JSON.stringify(items)),discount:disc,taxable,gstType:type,gstRate,gstAmount,total:taxable+gst,paid:+document.getElementById('amountPaid').value||0,notes:document.getElementById('notes').value}}
+refreshProductSelect();renderItems();loadSettings();renderOrders();renderProducts();
+</script>
+</body>
+</html>
